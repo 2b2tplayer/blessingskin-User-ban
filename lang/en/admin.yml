@@ -1,0 +1,45 @@
+title: User Ban
+
+ban_user: Ban User
+user_list: User List
+settings: Plugin Settings
+ban_style: Ban Notification Style
+ban_style_desc: Choose how banned users are notified when trying to login
+style_modal: Modal Dialog
+style_alert: Alert Dialog
+save_settings: Save Settings
+select_user: Select User
+search: Search
+search_placeholder: Search by UID, nickname or email
+clear_search: Clear Search
+per_page: per page
+total_users: Total users
+showing: Showing
+search_user: Search User
+selected_user: Selected User
+ban_reason: Ban Reason
+ban_duration: Ban Duration
+days: days
+permanent_ban: Permanent Ban
+ban_button: Execute Ban
+banned_list: Banned List
+user_id: User ID
+nickname: Nickname
+email: Email
+status: Status
+action: Action
+ban: Ban
+unban: Unban
+banned: Banned
+normal: Normal
+cancel: Cancel
+no_users: No users
+no_banned_users: No banned users
+no_user_found: No user found
+already_banned: Already Banned
+user_already_banned: This user is already banned
+select_user_first: Please select a user first
+reason_required: Please enter ban reason
+ban_failed: Ban failed
+unban_confirm: Are you sure you want to unban this user?
+unban_failed: Unban failed

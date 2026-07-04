@@ -1,0 +1,355 @@
+{% extends 'admin.base' %}
+
+{% block title %}{{ trans('UserBan::general.title') }}{% endblock %}
+
+{% block content %}
+<!-- 配置区域 -->
+<div class="card card-info mb-3">
+    <div class="card-header">
+        <h3 class="card-title">{{ trans('UserBan::admin.settings') }}</h3>
+    </div>
+    <div class="card-body">
+        <form id="settingsForm">
+            <div class="form-group">
+                <label>{{ trans('UserBan::admin.ban_style') }}</label>
+                <select class="form-control" id="banStyle" name="ban_style">
+                    <option value="modal" {% if ban_style == 'modal' %}selected{% endif %}>{{ trans('UserBan::admin.style_modal') }}</option>
+                    <option value="alert" {% if ban_style == 'alert' %}selected{% endif %}>{{ trans('UserBan::admin.style_alert') }}</option>
+                </select>
+                <small class="text-muted">{{ trans('UserBan::admin.ban_style_desc') }}</small>
+            </div>
+            <button type="submit" class="btn btn-info">{{ trans('UserBan::admin.save_settings') }}</button>
+        </form>
+    </div>
+</div>
+
+<!-- 用户列表 -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">{{ trans('UserBan::admin.user_list') }}</h3>
+    </div>
+    <div class="card-body">
+        <!-- 搜索和分页设置 -->
+        <form method="GET" action="" class="mb-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="keyword" 
+                               value="{{ keyword }}" 
+                               placeholder="{{ trans('UserBan::admin.search_placeholder') }}">
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> {{ trans('UserBan::admin.search') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-control" name="per_page" onchange="this.form.submit()">
+                        <option value="10" {% if per_page == 10 %}selected{% endif %}>10 {{ trans('UserBan::admin.per_page') }}</option>
+                        <option value="20" {% if per_page == 20 %}selected{% endif %}>20 {{ trans('UserBan::admin.per_page') }}</option>
+                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50 {{ trans('UserBan::admin.per_page') }}</option>
+                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100 {{ trans('UserBan::admin.per_page') }}</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    {% if keyword %}
+                    <a href="./" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> {{ trans('UserBan::admin.clear_search') }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+        
+        <!-- 总数显示 -->
+        <div class="text-muted mb-2">
+            {{ trans('UserBan::admin.total_users') }}: {{ users.total }} | 
+            {{ trans('UserBan::admin.showing') }}: {{ users.firstItem }} - {{ users.lastItem }}
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>{{ trans('UserBan::admin.user_id') }}</th>
+                    <th>{{ trans('UserBan::admin.nickname') }}</th>
+                    <th>{{ trans('UserBan::admin.email') }}</th>
+                    <th>{{ trans('UserBan::admin.status') }}</th>
+                    <th>{{ trans('UserBan::admin.action') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.uid }}</td>
+                    <td>{{ user.nickname }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.banned %}
+                        <span class="badge badge-danger">{{ trans('UserBan::admin.banned') }}</span>
+                        {% else %}
+                        <span class="badge badge-success">{{ trans('UserBan::admin.normal') }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.banned %}
+                        <button class="btn btn-sm btn-success unban-btn" 
+                                data-user-id="{{ user.uid }}"
+                                data-nickname="{{ user.nickname }}">
+                            {{ trans('UserBan::admin.unban') }}
+                        </button>
+                        {% else %}
+                        <button class="btn btn-sm btn-danger ban-btn" 
+                                data-user-id="{{ user.uid }}"
+                                data-nickname="{{ user.nickname }}"
+                                data-email="{{ user.email }}">
+                            {{ trans('UserBan::admin.ban') }}
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center">{{ trans('UserBan::admin.no_users') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- 分页 -->
+    {% if users.hasPages() %}
+    <div class="card-footer">
+        <div class="d-flex justify-content-center">
+            {{ users.links() | raw }}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 封禁弹窗 -->
+<div class="modal fade" id="banModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">{{ trans('UserBan::admin.ban_user') }}</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" id="banUserInfo"></div>
+                <input type="hidden" id="banUserId">
+                
+                <div class="form-group">
+                    <label>{{ trans('UserBan::admin.ban_reason') }}</label>
+                    <textarea class="form-control" id="banReason" rows="3"></textarea>
+                    <small class="form-text text-muted">{{ '留空将使用默认原因：' ~ trans('UserBan::general.default_reason') }}</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>{{ trans('UserBan::admin.ban_duration') }}</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="banDuration" min="1" value="7">
+                        <div class="input-group-append">
+                            <span class="input-group-text">{{ trans('UserBan::admin.days') }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="permanentBan">
+                        <label class="custom-control-label" for="permanentBan">{{ trans('UserBan::admin.permanent_ban') }}</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">{{ trans('UserBan::admin.cancel') }}</button>
+                <button type="button" class="btn btn-danger" id="confirmBan">{{ trans('UserBan::admin.ban_button') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const blessing = globalThis.blessing || {};
+    const base_url = blessing.base_url || window.location.origin;
+    
+    // 翻译字符串
+    const i18n = {
+        reason_required: "{{ trans('UserBan::admin.reason_required') }}",
+        ban_failed: "{{ trans('UserBan::admin.ban_failed') }}",
+        unban_confirm: "{{ trans('UserBan::admin.unban_confirm') }}",
+        unban_failed: "{{ trans('UserBan::admin.unban_failed') }}",
+        settings_saved: "{{ trans('UserBan::general.settings_saved') }}",
+        settings_failed: "{{ trans('UserBan::general.settings_failed') }}"
+    };
+    
+    // 显示提示函数
+    function showAlert(text) {
+        if (blessing.notify && blessing.notify.toast) {
+            blessing.notify.toast.error(text);
+        } else {
+            alert(text);
+        }
+    }
+    
+    function showSuccess(text) {
+        if (blessing.notify && blessing.notify.toast) {
+            blessing.notify.toast.success(text);
+        } else {
+            alert(text);
+        }
+    }
+    
+    // 发送 POST 请求
+    async function postRequest(url, data) {
+        // 获取 CSRF token（从 Twig 渲染时生成）
+        const csrfToken = "{{ csrf_token() }}";
+        
+        // 使用 jQuery AJAX（如果可用）
+        if (typeof $ !== 'undefined' && typeof $.ajax !== 'undefined') {
+            return new Promise(function(resolve, reject) {
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: data,
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    success: function(response) {
+                        resolve(response);
+                    },
+                    error: function(xhr, status, error) {
+                        reject(error);
+                    }
+                });
+            });
+        }
+        
+        if (blessing.fetch && blessing.fetch.post) {
+            return blessing.fetch.post(url, data);
+        }
+        
+        // 使用原生 fetch API
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(data)
+        });
+        
+        return response.json();
+    }
+    
+    // 配置表单保存
+    document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const banStyle = document.getElementById('banStyle').value;
+        
+        try {
+            const result = await postRequest(base_url + '/admin/user-ban/settings', {
+                ban_style: banStyle
+            });
+            
+            if (result.code === 0) {
+                showSuccess(result.message);
+            } else {
+                showAlert(result.message);
+            }
+        } catch (err) {
+            console.error(err);
+            showAlert(i18n.settings_failed);
+        }
+    });
+    
+    // 封禁按钮点击
+    document.querySelectorAll('.ban-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            const nickname = this.dataset.nickname;
+            const email = this.dataset.email;
+            
+            document.getElementById('banUserId').value = userId;
+            document.getElementById('banUserInfo').textContent = nickname + ' (' + email + ') [UID: ' + userId + ']';
+            document.getElementById('banReason').value = '';
+            document.getElementById('banDuration').value = '7';
+            document.getElementById('permanentBan').checked = false;
+            document.getElementById('banDuration').disabled = false;
+            
+            $('#banModal').modal('show');
+        });
+    });
+    
+    // 永久封禁复选框
+    document.getElementById('permanentBan').addEventListener('change', function(e) {
+        document.getElementById('banDuration').disabled = e.target.checked;
+    });
+    
+    // 确认封禁
+    document.getElementById('confirmBan').addEventListener('click', async function() {
+        const userId = document.getElementById('banUserId').value;
+        const reason = document.getElementById('banReason').value.trim();
+        
+        const isPermanent = document.getElementById('permanentBan').checked;
+        const duration = isPermanent ? 0 : parseInt(document.getElementById('banDuration').value) || 7;
+        
+        try {
+            const result = await postRequest(base_url + '/admin/user-ban/ban', {
+                user_id: parseInt(userId),
+                reason: reason,
+                duration: duration,
+                is_permanent: isPermanent
+            });
+            
+            if (result.code === 0) {
+                $('#banModal').modal('hide');
+                showSuccess(result.message);
+                setTimeout(function() {
+                    location.reload();
+                }, 1000);
+            } else {
+                showAlert(result.message);
+            }
+        } catch (err) {
+            console.error(err);
+            showAlert(i18n.ban_failed);
+        }
+    });
+    
+    // 解封按钮
+    document.querySelectorAll('.unban-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+            const userId = this.dataset.userId;
+            const nickname = this.dataset.nickname;
+            
+            const confirmed = confirm(i18n.unban_confirm + '\n用户: ' + nickname);
+            if (!confirmed) return;
+            
+            try {
+                const result = await postRequest(base_url + '/admin/user-ban/unban', {
+                    user_id: parseInt(userId)
+                });
+                
+                if (result.code === 0) {
+                    showSuccess(result.message);
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showAlert(result.message);
+                }
+            } catch (err) {
+                console.error(err);
+                showAlert(i18n.unban_failed);
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

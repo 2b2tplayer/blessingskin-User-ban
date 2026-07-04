@@ -1,0 +1,16 @@
+title: 用户封禁
+description: 允许管理员封禁用户，阻止其登录
+banned: "您的账号已被封禁。"
+login_banned: "您的账号已被封禁，无法登录。"
+permanent: 永久封禁
+already_banned: 该用户已被封禁
+cannot_ban_admin: 不能封禁管理员
+invalid_user: 无效的用户ID
+user_not_found: 用户不存在
+reason_required: 请输入封禁原因
+invalid_style: 无效的封禁样式
+settings_saved: 配置已保存
+settings_failed: 配置保存失败
+ban_success: 用户已成功封禁
+unban_success: 用户已成功解封
+default_reason: 违反规定

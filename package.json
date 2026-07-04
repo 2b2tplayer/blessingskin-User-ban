@@ -1,0 +1,17 @@
+{
+  "name": "user-ban",
+  "version": "1.0.0",
+  "title": "UserBan::general.title",
+  "description": "UserBan::general.description",
+  "author": "blessingskinplug",
+  "namespace": "UserBan",
+  "require": {
+    "blessing-skin-server": "^5|^6"
+  },
+  "enchants": {
+    "icon": {
+      "fa": "ban",
+      "bg": "red"
+    }
+  }
+}

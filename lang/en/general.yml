@@ -1,0 +1,16 @@
+title: User Ban
+description: Allow administrators to ban users and prevent them from logging in
+banned: "Your account has been banned."
+login_banned: "Your account has been banned and you cannot login."
+permanent: Permanent ban
+already_banned: This user is already banned
+cannot_ban_admin: Cannot ban administrator
+invalid_user: Invalid user ID
+user_not_found: User not found
+reason_required: Please enter ban reason
+invalid_style: Invalid ban style
+settings_saved: Settings saved
+settings_failed: Settings save failed
+ban_success: User has been banned successfully
+unban_success: User has been unbanned successfully
+default_reason: Violation of rules
