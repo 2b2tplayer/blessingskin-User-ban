@@ -13,9 +13,8 @@
 
 ## 安装
 
-1. 将插件目录放入 `plugins/user-ban`。
-2. 确保 `plugins/user-ban/package.json` 中的 `require` 包含 `blessing-skin-server` 依赖。
-3. 重启 Blessing Skin 服务器或重新加载插件。
+1. 将插件压缩包上传至服务端。
+2. 加载插件。
 
 ## 使用
 
