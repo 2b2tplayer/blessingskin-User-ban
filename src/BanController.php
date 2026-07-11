@@ -25,8 +25,9 @@ class BanController extends Controller
             $perPage = 20;
         }
 
-        // 查询普通用户（排除管理员）
-        $query = User::where('permission', '=', 'user');
+        // 查询非管理员用户，包括正常用户和已封禁用户
+        $query = User::where('permission', '!=', User::ADMIN)
+            ->where('permission', '!=', User::SUPER_ADMIN);
         
         // 应用搜索
         if (!empty($keyword)) {
@@ -128,8 +129,8 @@ class BanController extends Controller
                     ->orWhere('uid', $keyword);
             })
             ->where(function ($query) {
-                $query->where('permission', '!=', 'admin')
-                    ->where('permission', '!=', 'super-admin');
+                $query->where('permission', '!=', User::ADMIN)
+                    ->where('permission', '!=', User::SUPER_ADMIN);
             })
             ->limit(10)
             ->get()
@@ -181,7 +182,7 @@ class BanController extends Controller
         }
 
         // 不能封禁管理员
-        if ($user->permission === 'admin' || $user->permission === 'super-admin') {
+        if ($user->permission === User::ADMIN || $user->permission === User::SUPER_ADMIN) {
             return json(trans('UserBan::general.cannot_ban_admin'), 1);
         }
 
@@ -205,6 +206,12 @@ class BanController extends Controller
             'banned_by' => auth()->id(),
         ]);
 
+        // 同步 BlessingSkin 原生封禁状态
+        if ($user->permission !== User::BANNED) {
+            $user->permission = User::BANNED;
+            $user->save();
+        }
+
         return json(trans('UserBan::general.ban_success'), 0);
     }
 
@@ -222,6 +229,12 @@ class BanController extends Controller
         // 删除所有封禁记录（包括过期的）
         BanRecord::where('user_id', $userId)->delete();
 
+        $user = User::where('uid', $userId)->first();
+        if ($user && $user->permission === User::BANNED) {
+            $user->permission = User::NORMAL;
+            $user->save();
+        }
+
         return json(trans('UserBan::general.unban_success'), 0);
     }
 
@@ -232,6 +245,55 @@ class BanController extends Controller
     {
         try {
             $user = Auth::user();
+            
+            if (!$user) {
+                return json(['banned' => false], 0);
+            }
+            
+            $ban = BanRecord::getActiveBan($user->uid);
+            
+            if ($ban) {
+                // 获取封禁操作人信息
+                $bannedByUser = $ban->bannedBy;
+                $bannedByName = $bannedByUser ? $bannedByUser->nickname : 'System';
+                
+                return json([
+                    'banned' => true,
+                    'reason' => $ban->reason,
+                    'banned_at' => $ban->banned_at->toDateTimeString(),
+                    'expires_at' => $ban->expires_at ? $ban->expires_at->toDateTimeString() : null,
+                    'is_permanent' => $ban->is_permanent,
+                    'banned_by' => $bannedByName,
+                ], 0);
+            }
+            
+            return json(['banned' => false], 0);
+        } catch (\Exception $e) {
+            return json(['banned' => false, 'error' => $e->getMessage()], 0);
+        }
+    }
+
+    /**
+     * 根据用户名或邮箱检查封禁状态（无需认证）
+     */
+    public function checkByIdentification(Request $request)
+    {
+        try {
+            $identification = $request->input('identification');
+            
+            if (!$identification) {
+                return json(['banned' => false, 'error' => 'Missing identification'], 0);
+            }
+            
+            // 判断 identification 类型并查找用户
+            $authType = filter_var($identification, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+            
+            if ($authType == 'email') {
+                $user = User::where('email', $identification)->first();
+            } else {
+                $player = \App\Models\Player::where('name', $identification)->first();
+                $user = optional($player)->user;
+            }
             
             if (!$user) {
                 return json(['banned' => false], 0);

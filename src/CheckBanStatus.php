@@ -25,12 +25,11 @@ class CheckBanStatus
                 // 强制登出
                 Auth::logout();
                 
-                // 清除 session
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
+                // 使用 regenerate 而非 invalidate，保留封禁信息
+                $request->session()->regenerate();
 
-                // 存储封禁信息
-                $request->session()->flash('user_ban_info', [
+                // 存储封禁信息到 session（使用 put 确保重定向后可用）
+                $request->session()->put('user_ban_info', [
                     'banned' => true,
                     'reason' => $ban->reason,
                     'banned_at' => $ban->banned_at->toDateTimeString(),
@@ -39,8 +38,8 @@ class CheckBanStatus
                     'banned_by' => $bannedByName,
                 ]);
                 
-                // 存储错误消息（简化版）
-                $request->session()->flash('error', trans('UserBan::general.login_banned'));
+                $request->session()->put('user_ban_error', trans('UserBan::general.login_banned'));
+                $request->session()->save();
 
                 // 重定向到登录页面
                 return redirect()->route('auth.login');
